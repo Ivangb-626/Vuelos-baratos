@@ -1,32 +1,65 @@
-# React + TypeScript + Vite
+# Vuelos baratos (Skyscanner)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación web para descubrir vuelos baratos comparando múltiples aeropuertos de origen usando la API de Skyscanner desde un backend seguro.
 
-Currently, two official plugins are available:
+## MVP implementado
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Selección de múltiples aeropuertos de origen por zona + lista personalizada.
+- Búsqueda por destino concreto o **"Cualquier destino"**.
+- Fechas flexibles: fecha concreta, rango, mes completo, fin de semana y período.
+- Duración aproximada del viaje (mín/máx días) y número de pasajeros.
+- Comparación inteligente entre orígenes, deduplicación y ordenación por precio.
+- Filtros rápidos por precio máximo y número de escalas.
+- Etiquetado de oportunidad de precio cuando la API devuelve referencia histórica.
+- Capa de proveedor para desacoplar Skyscanner y permitir añadir otros proveedores.
+- Caché en memoria y control básico de concurrencia para evitar peticiones innecesarias.
 
-## React Compiler
+## Arquitectura
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend (`/src`)**: interfaz React + Vite.
+- **Lógica de búsqueda y filtros (`/src/lib`)**: deduplicación, ordenación y filtros básicos.
+- **Backend (`/server`)**: API Express y orquestación de búsquedas multi-origen.
+- **Integración Skyscanner (`/server/providers`)**: adaptador con endpoint configurable.
+- **Procesamiento/normalización (`/server/providers/skyscannerProvider.ts`)**: mapeo de respuesta a un modelo interno.
+- **Secrets/API key**: solo en variables de entorno del backend (`.env`).
 
-## Expanding the Oxlint configuration
+## Configuración
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+1. Copia `.env.example` a `.env`.
+2. Rellena `SKYSCANNER_API_KEY` con tu API key real.
+3. Si tu contrato de API usa rutas distintas, ajusta `SKYSCANNER_API_BASE_URL` y `SKYSCANNER_SEARCH_ENDPOINT`.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+> Nota: no se exponen credenciales en el frontend.
+
+## Ejecutar
+
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Frontend: `http://localhost:5173`
+Backend: `http://localhost:8787`
+
+## Comandos de verificación
+
+```bash
+npm run lint
+npm run test
+npm run typecheck
+npm run build
+```
+
+## Limitaciones reales de API y extensibilidad
+
+La API oficial puede variar por contrato (endpoints habilitados, campos históricos y cobertura de "anywhere").
+El proyecto está diseñado para:
+
+- soportar la búsqueda actual con los endpoints configurados;
+- **no inventar históricos** cuando la API no los devuelve;
+- permitir ampliar el proveedor para:
+  - alertas de bajadas de precio,
+  - seguimiento de rutas,
+  - históricos enriquecidos,
+  - cuentas de usuario,
+  - notificaciones.

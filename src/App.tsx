@@ -1,121 +1,239 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useMemo, useState } from 'react'
+import { searchFlights } from './api/client'
+import { ResultCard } from './components/ResultCard'
+import { airportZones } from './lib/airportZones'
+import { cheapestByDestination, dedupeFlights, filterFlights, sortByPrice } from './lib/flightUtils'
+import type { DateMode, FlightResult, SearchPayload } from './types'
 import './App.css'
 
+const parseAirports = (value: string): string[] =>
+  value
+    .split(',')
+    .map((airport) => airport.trim().toUpperCase())
+    .filter((airport) => airport.length >= 3)
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [zone, setZone] = useState(airportZones[0].id)
+  const [customAirports, setCustomAirports] = useState('')
+  const [destinationType, setDestinationType] = useState<'specific' | 'anywhere'>('anywhere')
+  const [destination, setDestination] = useState('')
+  const [dateMode, setDateMode] = useState<DateMode>('range')
+  const [outboundDate, setOutboundDate] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [month, setMonth] = useState('')
+  const [minNights, setMinNights] = useState(2)
+  const [maxNights, setMaxNights] = useState(5)
+  const [passengers, setPassengers] = useState(1)
+  const [maxPrice, setMaxPrice] = useState<number | undefined>()
+  const [maxStops, setMaxStops] = useState<number | undefined>()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [partialErrors, setPartialErrors] = useState<string[]>([])
+  const [results, setResults] = useState<FlightResult[]>([])
+
+  const selectedAirports = useMemo(() => {
+    const selectedZone = airportZones.find((item) => item.id === zone)
+    const combined = [...(selectedZone?.airports ?? []), ...parseAirports(customAirports)]
+    return [...new Set(combined)]
+  }, [zone, customAirports])
+
+  const destinationBestPrices = useMemo(() => cheapestByDestination(results), [results])
+
+  const filteredResults = useMemo(
+    () => sortByPrice(filterFlights(dedupeFlights(results), maxPrice, maxStops)),
+    [results, maxPrice, maxStops],
+  )
+
+  const submitSearch = async () => {
+    setLoading(true)
+    setError('')
+    setPartialErrors([])
+
+    const payload: SearchPayload = {
+      originAirports: selectedAirports,
+      destinationType,
+      destination: destinationType === 'specific' ? destination : undefined,
+      dateMode,
+      outboundDate: dateMode === 'exact' ? outboundDate : undefined,
+      dateFrom: ['range', 'weekend', 'period'].includes(dateMode) ? dateFrom : undefined,
+      dateTo: ['range', 'weekend', 'period'].includes(dateMode) ? dateTo : undefined,
+      month: dateMode === 'month' ? month : undefined,
+      minNights,
+      maxNights,
+      passengers,
+    }
+
+    try {
+      const response = await searchFlights(payload)
+      setResults(response.results)
+      setPartialErrors(response.partialErrors)
+    } catch (searchError) {
+      setError(searchError instanceof Error ? searchError.message : 'Error desconocido')
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="layout">
+      <section className="panel">
+        <h1>Vuelos baratos con Skyscanner</h1>
+        <p>Compara múltiples aeropuertos de origen y descubre oportunidades por precio.</p>
+
+        <div className="grid">
+          <label>
+            Zona de origen
+            <select value={zone} onChange={(event) => setZone(event.target.value)}>
+              {airportZones.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Aeropuertos personalizados (IATA, separados por coma)
+            <input
+              type="text"
+              value={customAirports}
+              onChange={(event) => setCustomAirports(event.target.value)}
+              placeholder="FRA, STR, FKB"
+            />
+          </label>
+
+          <label>
+            Destino
+            <select value={destinationType} onChange={(event) => setDestinationType(event.target.value as 'specific' | 'anywhere')}>
+              <option value="anywhere">Cualquier destino</option>
+              <option value="specific">Destino concreto</option>
+            </select>
+          </label>
+
+          {destinationType === 'specific' ? (
+            <label>
+              IATA destino
+              <input
+                type="text"
+                value={destination}
+                onChange={(event) => setDestination(event.target.value.toUpperCase())}
+                placeholder="ROM"
+              />
+            </label>
+          ) : null}
+
+          <label>
+            Modo de fechas
+            <select value={dateMode} onChange={(event) => setDateMode(event.target.value as DateMode)}>
+              <option value="exact">Fecha concreta</option>
+              <option value="range">Rango</option>
+              <option value="month">Mes completo</option>
+              <option value="weekend">Fin de semana</option>
+              <option value="period">Cualquier fecha del período</option>
+            </select>
+          </label>
+
+          {dateMode === 'exact' ? (
+            <label>
+              Fecha de salida
+              <input type="date" value={outboundDate} onChange={(event) => setOutboundDate(event.target.value)} />
+            </label>
+          ) : null}
+
+          {['range', 'weekend', 'period'].includes(dateMode) ? (
+            <>
+              <label>
+                Desde
+                <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+              </label>
+              <label>
+                Hasta
+                <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+              </label>
+            </>
+          ) : null}
+
+          {dateMode === 'month' ? (
+            <label>
+              Mes
+              <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
+            </label>
+          ) : null}
+
+          <label>
+            Duración mínima (días)
+            <input type="number" min={1} value={minNights} onChange={(event) => setMinNights(Number(event.target.value))} />
+          </label>
+
+          <label>
+            Duración máxima (días)
+            <input type="number" min={1} value={maxNights} onChange={(event) => setMaxNights(Number(event.target.value))} />
+          </label>
+
+          <label>
+            Pasajeros
+            <input type="number" min={1} value={passengers} onChange={(event) => setPassengers(Number(event.target.value))} />
+          </label>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+
+        <div className="chips">
+          {selectedAirports.map((airport) => (
+            <span key={airport}>{airport}</span>
+          ))}
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+
+        <button onClick={() => void submitSearch()} disabled={loading || selectedAirports.length === 0}>
+          {loading ? 'Buscando...' : 'Buscar vuelos'}
         </button>
+
+        {error ? <p className="error">{error}</p> : null}
+        {partialErrors.length > 0 ? (
+          <ul className="warn-list">
+            {partialErrors.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
-      <div className="ticks"></div>
+      <section className="panel">
+        <h2>Filtros rápidos</h2>
+        <div className="grid">
+          <label>
+            Precio máximo
+            <input
+              type="number"
+              min={0}
+              value={maxPrice ?? ''}
+              onChange={(event) => setMaxPrice(event.target.value ? Number(event.target.value) : undefined)}
+            />
+          </label>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <label>
+            Escalas máximas
+            <input
+              type="number"
+              min={0}
+              value={maxStops ?? ''}
+              onChange={(event) => setMaxStops(event.target.value ? Number(event.target.value) : undefined)}
+            />
+          </label>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+
+        <h2>Resultados ({filteredResults.length})</h2>
+        <div className="results-grid">
+          {filteredResults.map((flight) => (
+            <ResultCard
+              key={flight.id}
+              flight={flight}
+              destinationBestPrice={destinationBestPrices[flight.destinationAirport] ?? flight.price}
+            />
+          ))}
         </div>
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
