@@ -1,0 +1,41 @@
+{
+  "name": "vuelos-baratos",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite",
+    "dev:api": "tsx watch server/index.ts",
+    "build": "npm run build:web && npm run build:api",
+    "build:web": "tsc -p tsconfig.app.json && vite build",
+    "build:api": "tsc -p tsconfig.server.json",
+    "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.server.json --noEmit",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "preview": "vite preview",
+    "start": "node dist/server/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^9.2.1",
+    "oxlint": "^1.81.0",
+    "tsx": "^4.20.5",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^3.2.4"
+  }
+}

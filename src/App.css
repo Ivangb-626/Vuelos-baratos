@@ -1,0 +1,127 @@
+:root {
+  color-scheme: light dark;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0d1f2d;
+}
+
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.panel {
+  background: #12283a;
+  border: 1px solid #24435e;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+input,
+select,
+button {
+  border-radius: 8px;
+  border: 1px solid #355a7a;
+  background: #0b1722;
+  color: #f4f7fb;
+  padding: 0.5rem;
+}
+
+button {
+  cursor: pointer;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.chips span,
+.badge {
+  background: #1d3f59;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.badge.best {
+  background: #1b7f3b;
+}
+
+.results-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.result-card {
+  border: 1px solid #355a7a;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #0e1d2a;
+}
+
+.result-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.result-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.result-card dt {
+  font-size: 0.8rem;
+  color: #90aac2;
+}
+
+.result-card dd {
+  margin: 0;
+}
+
+.booking-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: #9fd3ff;
+}
+
+.error {
+  color: #ff9da3;
+}
+
+.warn-list {
+  color: #ffd77a;
+  padding-left: 1rem;
+}
